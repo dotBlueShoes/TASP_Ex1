@@ -97,6 +97,54 @@
 // 4 - 3
 // 8 - 7
 
+namespace Math {
+
+    //template <class T, size length>
+    //using Vector = array<T, length>;
+    //
+    //template <class T, size lengthX, size lengthY>
+    //using Matrix = array<array<T, lengthX>, lengthY>;
+    //
+    //template <class T, size lengthX, size lengthY>
+    //void Multiply(
+    //    const Matrix<T, lengthX, lengthY>& matrix,
+    //    const Vector<T, lengthX>& vector
+    //) {
+    //    Vector<T, lengthX> result {0};
+    //
+    //    for (size y = 0; y < matrix.size(); y++) {
+    //        for (size x = 0; x < matrix.data().size(); x++) {
+    //            result[0] += 10;
+    //        }
+    //    }
+    //
+    //    return result;
+    //}
+
+    // template <class length>
+    // using BitVector = length;
+    // 
+    // template <class lengthX, size lengthY>
+    // using BitMatrix = array<lengthX, lengthY>;
+    // 
+    // template <class lengthX, size lengthY>
+    // void Multiply(
+    //     const BitMatrix<lengthX, lengthY>& matrix,
+    //     const BitVector<lengthX>& vector
+    // ) {
+    //     Vector<T, lengthX> result { 0 };
+    // 
+    //     for (size y = 0; y < matrix.size(); y++) {
+    //         for (size x = 0; x < matrix.data().size(); x++) {
+    //             result[0] += 10;
+    //         }
+    //     }
+    // 
+    //     return result;
+    // }
+
+}
+
 namespace BitError1 {
 
     // 'word' type is 16-bits
@@ -105,7 +153,7 @@ namespace BitError1 {
     //   4 starting bits are useless.
     const size messageBites = 8;
     const size parityBites = 4;
-    const array<const word, parityBites> matrix {
+    const array<const word, parityBites> matrixH {
         0b0000'0111'0110'1000,
         0b0000'1011'0011'0100,
         0b0000'1101'1001'0010,
@@ -114,6 +162,16 @@ namespace BitError1 {
 
     auto RepairMessage(const word& message) {
 
+    }
+
+    auto Multiply(
+        const array<const word, parityBites> matrix, 
+        const word vector
+    ) {
+        word result { 0 }; // 4 - unneeded, 8 - data, 4 - parity
+    
+    
+        return result;
     }
 
     auto EncodeMessage(const byte& data) {
@@ -138,7 +196,7 @@ namespace BitError2 {
     //   0 starting bits that are useless. Look BitError1.
     const size messageBites = 8;
     const size parityBites = 8;
-    const array<const word, parityBites> matrix {
+    const array<const word, parityBites> matrixH {
         0b0111'1111'1000'0000,
         0b1011'1111'0100'0000,
         0b1101'1111'0010'0000,
@@ -164,8 +222,10 @@ uint32 main (uint64 argumentsCount, bchar** arguments) {
     //  - invalid -> data           // correcting method
 
     std::cout << "Hello World!\n";
-    byte data = 0b0000'0000;
-    word message = 0b1110'1110'1110'1110;
+    byte data = 0b1010'1111;
+    word message = data << 4;
+    message += BitError1::matrixH.size();
+    BitError1::Multiply(BitError1::matrixH, message);
 
     std::cout << std::bitset<sizeof message * 8>(message);
 }
