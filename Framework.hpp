@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <bitset>
 #include <vector>
 #include <string>

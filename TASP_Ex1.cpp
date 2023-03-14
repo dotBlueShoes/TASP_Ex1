@@ -232,9 +232,7 @@ namespace BitError1 {
         return message;
     }
 
-    auto DecodeMessage(word& message) {
-        byte data = 0b0000'0000;
-
+    auto DecodeMessage(const word& message) {
         // Equation of x, y, z, w.
         const word equationX = message & matrixH[0];
         const word equationY = message & matrixH[1];
@@ -250,7 +248,7 @@ namespace BitError1 {
         if (!parityX && !parityY && !parityZ && !parityW) {
             return (byte)(message >> 4);
         } else {
-            std::cout << "message error !" << std::endl;
+            std::cout << "Message error encountered!" << std::endl;
 
             word errorIndex = parityX;
             errorIndex <<= 1;
@@ -261,12 +259,12 @@ namespace BitError1 {
             errorIndex += parityW;
 
             const word mask = 0b0000'0000'0000'0001 << errorIndex - 1;
-            message ^= mask;
+            byte data = (message ^ mask) >> 4;
 
-            std::cout << std::bitset<sizeof errorIndex * 8>(errorIndex) << std::endl;
-            std::cout << "result: " << std::bitset<sizeof message * 8>(message) << std::endl;
+            //std::cout << std::bitset<sizeof errorIndex * 8>(errorIndex) << std::endl;
+            //std::cout << "result: " << std::bitset<sizeof message * 8>(message) << std::endl;
 
-            return (byte)(message >> 4);
+            return data;
         }
 
     }
@@ -299,24 +297,25 @@ uint32 main (uint64 argumentsCount, bchar** arguments) {
 
     // encode --method 1 -f sample.txt -o output1
     // decode --method 1 -f output1 -o output2.txt
-    // code invalid ...
+    // encode invalid ...
 
-    // 1. Opracować kod korygujący pojedynczy błąd bitowy dla wiadomości ośmiobitowych(1 bajt)
-    //  - data -> message -> data   // encoding-decoding
-    //  - invalid -> data           // correcting method
+    const auto iFilePath("C:\\Final.gif");
+    const auto oFilePath("C:\\Final.gif");
 
-    std::cout << "Hello World!\n";
+    std::ifstream origin(iFilePath, std::ios::binary);
+    std::ofstream result(oFilePath, std::ios::binary);
     
-    word errorMessage = 0b0000'1010'1010'0100;
+    const word errorMessage = 0b0000'1010'1010'0100;
+
     byte data = 0b1010'1010;
     word encodedMessage = BitError1::EncodeMessage(data);
     byte decodedMessage = BitError1::DecodeMessage(encodedMessage);
     byte decodedErrorMessage = BitError1::DecodeMessage(errorMessage);
     
 
-    std::cout << std::bitset<sizeof encodedMessage * 8>(encodedMessage) << std::endl;
-    std::cout << std::bitset<sizeof decodedMessage * 8>(decodedMessage) << std::endl;
-    std::cout << std::bitset<sizeof decodedErrorMessage * 8>(decodedErrorMessage) << std::endl;
+    std::cout << "Encoded Message: " << std::bitset<sizeof encodedMessage * 8>(encodedMessage) << std::endl;
+    std::cout << "Decoded Message: " << std::bitset<sizeof decodedMessage * 8>(decodedMessage) << std::endl;
+    std::cout << "Decoded Error Message: " << std::bitset<sizeof decodedErrorMessage * 8>(decodedErrorMessage) << std::endl;
 
     //std::cout << std::to_string(parityX) << std::endl;
     //std::cout << std::to_string(parityY) << std::endl;
