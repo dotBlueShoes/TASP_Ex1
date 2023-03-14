@@ -1,6 +1,7 @@
 #include <iostream>
 #include <bitset>
 #include <vector>
+#include <string>
 
 // Exercise
 // 1. Opracowaæ kod koryguj¹cy pojedynczy b³¹d bitowy dla wiadomoœci oœmiobitowych (1 bajt)

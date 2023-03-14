@@ -99,6 +99,22 @@
 
 namespace Math {
 
+    const word m1 = 0b0101010101010101; //binary: 0101...
+    const word m2 = 0b0011001100110011; //binary: 00110011..
+    const word m4 = 0b0000111100001111; //binary:  4 zeros,  4 ones ...
+    const word m8 = 0b0000000011111111; //binary:  8 zeros,  8 ones ...
+    //const byte m16 = 0x0000ffff0000ffff; //binary: 16 zeros, 16 ones ...
+    //const byte m32 = 0x00000000ffffffff; //binary: 32 zeros, 32 ones
+
+    word CountSetBits(word x) {
+        x = (x & m1) + ((x >> 1) & m1);
+        x = (x & m2) + ((x >> 2) & m2);
+        x = (x & m4) + ((x >> 4) & m4);
+        x = (x & m8) + ((x >> 8) & m8);
+        //x = (x & (0x0000ffff)) + ((x >> 16) & (0x0000ffff));
+        return x;
+    }
+
     //template <class T, size length>
     //using Vector = array<T, length>;
     //
@@ -147,6 +163,27 @@ namespace Math {
 
 namespace BitError1 {
 
+    // Hamming Code (11/4) but we only use (8/4)
+
+    // S3 S2 S1 S0 | ERROR
+    // ----------------------
+    //  0  0  0  0 | No ERROR
+    //  0  0  0  1 | P0             P0 = D0^D1^D3^D4^D6
+    //  0  0  1  0 | P1             P1 = D0^D2^D3^D5^D6
+    //  0  0  1  1 | D0             P2 = D1^D2^D3^D7
+    //  0  1  0  0 | P2             P3 = D4^D5^D6^D7
+    //  0  1  0  1 | D1
+    //  0  1  1  0 | D2
+    //  0  1  1  1 | D3
+    //  1  0  0  0 | P3
+    //  1  0  0  1 | D4
+    //  1  0  1  0 | D5
+    //  1  0  1  1 | D6
+    //  1  1  0  0 | D7
+    //  1  1  0  1 | 
+    //  1  1  1  0 | 
+    //  1  1  1  1 | 
+
     // 'word' type is 16-bits
     //  - thats because we need 8 bits for "messageBites" and
     //   4 bits for parityBites, therefore
@@ -164,18 +201,32 @@ namespace BitError1 {
 
     }
 
-    auto Multiply(
-        const array<const word, parityBites> matrix, 
-        const word vector
-    ) {
-        word result { 0 }; // 4 - unneeded, 8 - data, 4 - parity
-    
-    
-        return result;
-    }
-
     auto EncodeMessage(const byte& data) {
-        word message = 0b0000'0000'0000'0000;
+        const word preParityBits = 0b0000'1111;
+
+        word message = data << 4;
+        message += preParityBits;
+
+        // Equation of x, y, z, w.
+        const word equationX = message & BitError1::matrixH[0];
+        const word equationY = message & BitError1::matrixH[1];
+        const word equationZ = message & BitError1::matrixH[2];
+        const word equationW = message & BitError1::matrixH[3];
+
+        const word parityX = (Math::CountSetBits(equationX) - 1) & 1;
+        const word parityY = (Math::CountSetBits(equationY) - 1) & 1;
+        const word parityZ = (Math::CountSetBits(equationZ) - 1) & 1;
+        const word parityW = (Math::CountSetBits(equationW) - 1) & 1;
+
+        message = data;
+        message <<= 1;
+        message += parityX;
+        message <<= 1;
+        message += parityY;
+        message <<= 1;
+        message += parityZ;
+        message <<= 1;
+        message += parityW;
 
         return message;
     }
@@ -209,7 +260,6 @@ namespace BitError2 {
 
 }
 
-
 //uint32 wmain(uint64 argumentsCount, wchar** arguments)
 uint32 main (uint64 argumentsCount, bchar** arguments) {
 
@@ -222,10 +272,25 @@ uint32 main (uint64 argumentsCount, bchar** arguments) {
     //  - invalid -> data           // correcting method
 
     std::cout << "Hello World!\n";
-    byte data = 0b1010'1111;
-    word message = data << 4;
-    message += BitError1::matrixH.size();
-    BitError1::Multiply(BitError1::matrixH, message);
+    
+    byte data = 0b1010'1010;
+    word endcodedMessage = BitError1::EncodeMessage(data);
 
-    std::cout << std::bitset<sizeof message * 8>(message);
+    std::cout << std::bitset<sizeof endcodedMessage * 8>(endcodedMessage) << std::endl;
+    //std::cout << std::bitset<sizeof result * 8>(result) << std::endl;
+
+    //std::cout << std::to_string(parityX) << std::endl;
+    //std::cout << std::to_string(parityY) << std::endl;
+    //std::cout << std::to_string(parityZ) << std::endl;
+    //std::cout << std::to_string(parityW) << std::endl;
+
+    //std::cout << std::bitset<sizeof resultX * 8>(resultX) << std::endl;
+    //std::cout << std::bitset<sizeof resultY * 8>(resultY) << std::endl;
+    //std::cout << std::bitset<sizeof resultZ * 8>(resultZ) << std::endl;
+    //std::cout << std::bitset<sizeof resultW * 8>(resultW) << std::endl;
+
+    //std::cout << std::to_string(countSetBits(resultX)) << std::endl;
+    //std::cout << std::to_string(countSetBits(resultY)) << std::endl;
+    //std::cout << std::to_string(countSetBits(resultZ)) << std::endl;
+    //std::cout << std::to_string(countSetBits(resultW)) << std::endl;
 }
