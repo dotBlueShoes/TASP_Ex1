@@ -199,10 +199,6 @@ namespace BitError1 {
         0b0000'1110'1100'0001,
     };
 
-    auto RepairMessage(const word& message) {
-
-    }
-
     auto EncodeMessage(const byte& data) {
         const word preParityBits = 0b0000'1111;
 
@@ -292,51 +288,49 @@ namespace BitError2 {
         0b1111'1110'0000'0001,
     };
 
+    auto EncodeMessage(const byte& data) {}
+    auto DecodeMessage(const word& message) {}
+
 }
 
-//uint32 wmain(uint64 argumentsCount, wchar** arguments)
-uint32 main (uint64 argumentsCount, bchar** arguments) {
+namespace Data {
 
-    // encode --method 1 -f sample.txt -o output1
-    // decode --method 1 -f output1 -o output2.txt
-    // encode invalid ...
-
-    const auto iFilePath("nocoded.txt");
-    const auto oFilePath("encoded.txt");
-    const auto rFilePath("decoded.txt");
-
-    { // Encoding
-        std::ifstream originFile(iFilePath, std::ios::binary);
-        std::ofstream resultFile(oFilePath, std::ios::binary);
+    auto Encode(
+        const char* const originFilePath,
+        const char* const outputFilePath
+    ) {
+        std::ifstream originFile(originFilePath, std::ios::binary);
+        std::ofstream resultFile(outputFilePath, std::ios::binary);
 
         std::vector<byte> inputBuffer(std::istreambuf_iterator<char>(originFile), {});
         originFile.close();
 
-        //std::cout << inputBuffer.size() << std::endl;
-
+        //std::cerr << inputBuffer.size() << std::endl;
         // Initialize buffer with the size of input but for ( word type ).
-        std::vector<word> outputBuffer(inputBuffer.size());
+        //std::vector<word> outputBuffer(inputBuffer.size());
         word encodedMessage;
 
-        resultFile << (byte)(0b00000000);
+        //resultFile << (byte)(0b00000000);
 
         for (const auto& value : inputBuffer) {
             encodedMessage = BitError1::EncodeMessage(value);
-            outputBuffer.push_back(encodedMessage);
+            //outputBuffer.push_back(encodedMessage);
             resultFile << (byte)(encodedMessage >> 8) << (byte)(encodedMessage);    // File output.
-            //resultFile.write((char*)outputBuffer.data(), sizeof(int) * 2);
-
-            std::cout << "Value: " << std::bitset<sizeof value * 8>(value) << std::endl;
-            std::cout << "Encoded Message: " << std::bitset<sizeof encodedMessage * 8>(encodedMessage) << std::endl;
+            //std::cout << "Value: " << std::bitset<sizeof value * 8>(value) << std::endl;
+            //std::cout << "Encoded Message: " << std::bitset<sizeof encodedMessage * 8>(encodedMessage) << std::endl;
         }
+
         resultFile.close();
     }
 
-    { // Decoding
-        std::ifstream originFile(oFilePath, std::ios::binary);
-        std::ofstream resultFile(rFilePath, std::ios::binary);
+    auto Decode(
+        const char* const originFilePath,
+        const char* const outputFilePath
+    ) {
+        std::ifstream originFile(originFilePath, std::ios::binary);
+        std::ofstream resultFile(outputFilePath, std::ios::binary);
 
-        originFile.get();
+        //originFile.get();
 
         std::vector<byte> inputBuffer(std::istreambuf_iterator<char>(originFile), {});
         originFile.close();
@@ -363,7 +357,32 @@ uint32 main (uint64 argumentsCount, bchar** arguments) {
         resultFile.close();
     }
 
-    //out2File.close();
+}
+
+
+
+//uint32 wmain(uint64 argumentsCount, wchar** arguments)
+uint32 main (uint64 argumentsCount, bchar** arguments) {
+
+    // encode --method 1 -f sample.txt -o output1
+    // decode --method 1 -f output1 -o output2.txt
+    // encode invalid ...
+
+    const auto iFilePath("nocoded.txt");
+    const auto oFilePath("encoded.txt");
+    const auto rFilePath("decoded.txt");
+
+    if (argumentsCount <= 1) return 1;
+
+    if (strcmp(arguments[1], "encode") == 0) {
+        std::cout << "encoding..." << std::endl;
+        Data::Encode(iFilePath, oFilePath);
+    } else if (strcmp(arguments[1], "decode") == 0) {
+        std::cout << "decoding..." << std::endl;
+        Data::Decode(oFilePath, rFilePath);
+    }
+        
+    
     
     // { No IO.
     //     const word errorMessage = 0b0000'1010'1010'0100;
