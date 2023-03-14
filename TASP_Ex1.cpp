@@ -1,5 +1,7 @@
 ﻿#include "Framework.hpp"
 
+// https://en.wikipedia.org/wiki/Hamming_weight
+
 // 0b0000.0000 0b0000.0001
 // 
 // 0b0000.0010 0b0000.0011
@@ -299,36 +301,81 @@ uint32 main (uint64 argumentsCount, bchar** arguments) {
     // decode --method 1 -f output1 -o output2.txt
     // encode invalid ...
 
-    const auto iFilePath("C:\\Final.gif");
-    const auto oFilePath("C:\\Final.gif");
+    const auto iFilePath("nocoded.txt");
+    const auto oFilePath("encoded.txt");
+    const auto rFilePath("decoded.txt");
 
-    std::ifstream origin(iFilePath, std::ios::binary);
-    std::ofstream result(oFilePath, std::ios::binary);
+    { // Encoding
+        std::ifstream originFile(iFilePath, std::ios::binary);
+        std::ofstream resultFile(oFilePath, std::ios::binary);
+
+        std::vector<byte> inputBuffer(std::istreambuf_iterator<char>(originFile), {});
+        originFile.close();
+
+        //std::cout << inputBuffer.size() << std::endl;
+
+        // Initialize buffer with the size of input but for ( word type ).
+        std::vector<word> outputBuffer(inputBuffer.size());
+        word encodedMessage;
+
+        resultFile << (byte)(0b00000000);
+
+        for (const auto& value : inputBuffer) {
+            encodedMessage = BitError1::EncodeMessage(value);
+            outputBuffer.push_back(encodedMessage);
+            resultFile << (byte)(encodedMessage >> 8) << (byte)(encodedMessage);    // File output.
+            //resultFile.write((char*)outputBuffer.data(), sizeof(int) * 2);
+
+            std::cout << "Value: " << std::bitset<sizeof value * 8>(value) << std::endl;
+            std::cout << "Encoded Message: " << std::bitset<sizeof encodedMessage * 8>(encodedMessage) << std::endl;
+        }
+        resultFile.close();
+    }
+
+    { // Decoding
+        std::ifstream originFile(oFilePath, std::ios::binary);
+        std::ofstream resultFile(rFilePath, std::ios::binary);
+
+        originFile.get();
+
+        std::vector<byte> inputBuffer(std::istreambuf_iterator<char>(originFile), {});
+        originFile.close();
+
+        word encodedMessage;
+        byte decodedMessage;
+
+        //std::cout << inputBuffer.size() << std::endl;
+
+        for (size i = 0; i < inputBuffer.size(); i += 2) {
+
+            encodedMessage = inputBuffer[i];
+            encodedMessage <<= 8;
+            encodedMessage += inputBuffer[i + 1];
+
+            decodedMessage = BitError1::DecodeMessage(encodedMessage);
+
+            //std::cout << "Decoded Message:: " << std::bitset<sizeof encodedMessage * 8>(encodedMessage) << std::endl;
+            //std::cout << "Encoded Message: " << std::bitset<sizeof decodedMessage * 8>(decodedMessage) << std::endl;
+
+            resultFile << decodedMessage;    // File output.
+        }
+
+        resultFile.close();
+    }
+
+    //out2File.close();
     
-    const word errorMessage = 0b0000'1010'1010'0100;
-
-    byte data = 0b1010'1010;
-    word encodedMessage = BitError1::EncodeMessage(data);
-    byte decodedMessage = BitError1::DecodeMessage(encodedMessage);
-    byte decodedErrorMessage = BitError1::DecodeMessage(errorMessage);
+    // { No IO.
+    //     const word errorMessage = 0b0000'1010'1010'0100;
+    //     byte data = 0b1010'1010;
+    //     word encodedMessage = BitError1::EncodeMessage(data);
+    //     byte decodedMessage = BitError1::DecodeMessage(encodedMessage);
+    //     byte decodedErrorMessage = BitError1::DecodeMessage(errorMessage);
+    // 
+    // 
+    //     std::cout << "Encoded Message: " << std::bitset<sizeof encodedMessage * 8>(encodedMessage) << std::endl;
+    //     std::cout << "Decoded Message: " << std::bitset<sizeof decodedMessage * 8>(decodedMessage) << std::endl;
+    //     std::cout << "Decoded Error Message: " << std::bitset<sizeof decodedErrorMessage * 8>(decodedErrorMessage) << std::endl;
+    // }
     
-
-    std::cout << "Encoded Message: " << std::bitset<sizeof encodedMessage * 8>(encodedMessage) << std::endl;
-    std::cout << "Decoded Message: " << std::bitset<sizeof decodedMessage * 8>(decodedMessage) << std::endl;
-    std::cout << "Decoded Error Message: " << std::bitset<sizeof decodedErrorMessage * 8>(decodedErrorMessage) << std::endl;
-
-    //std::cout << std::to_string(parityX) << std::endl;
-    //std::cout << std::to_string(parityY) << std::endl;
-    //std::cout << std::to_string(parityZ) << std::endl;
-    //std::cout << std::to_string(parityW) << std::endl;
-
-    //std::cout << std::bitset<sizeof equationX * 8>(equationX) << std::endl;
-    //std::cout << std::bitset<sizeof equationY * 8>(equationY) << std::endl;
-    //std::cout << std::bitset<sizeof equationZ * 8>(equationZ) << std::endl;
-    //std::cout << std::bitset<sizeof equationW * 8>(equationW) << std::endl;
-
-    //std::cout << std::to_string(countSetBits(resultX)) << std::endl;
-    //std::cout << std::to_string(countSetBits(resultY)) << std::endl;
-    //std::cout << std::to_string(countSetBits(resultZ)) << std::endl;
-    //std::cout << std::to_string(countSetBits(resultW)) << std::endl;
 }
