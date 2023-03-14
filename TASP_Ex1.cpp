@@ -208,11 +208,12 @@ namespace BitError1 {
         message += preParityBits;
 
         // Equation of x, y, z, w.
-        const word equationX = message & BitError1::matrixH[0];
-        const word equationY = message & BitError1::matrixH[1];
-        const word equationZ = message & BitError1::matrixH[2];
-        const word equationW = message & BitError1::matrixH[3];
+        const word equationX = message & matrixH[0];
+        const word equationY = message & matrixH[1];
+        const word equationZ = message & matrixH[2];
+        const word equationW = message & matrixH[3];
 
+        // -1, because one bit stands for said x or y, z, w thats inside equation.
         const word parityX = (Math::CountSetBits(equationX) - 1) & 1;
         const word parityY = (Math::CountSetBits(equationY) - 1) & 1;
         const word parityZ = (Math::CountSetBits(equationZ) - 1) & 1;
@@ -231,10 +232,43 @@ namespace BitError1 {
         return message;
     }
 
-    auto DecodeMessage(const word& message) {
+    auto DecodeMessage(word& message) {
         byte data = 0b0000'0000;
 
-        return data;
+        // Equation of x, y, z, w.
+        const word equationX = message & matrixH[0];
+        const word equationY = message & matrixH[1];
+        const word equationZ = message & matrixH[2];
+        const word equationW = message & matrixH[3];
+
+        // Check if equal to 0
+        const word parityX = Math::CountSetBits(equationX) & 1;
+        const word parityY = Math::CountSetBits(equationY) & 1;
+        const word parityZ = Math::CountSetBits(equationZ) & 1;
+        const word parityW = Math::CountSetBits(equationW) & 1;
+
+        if (!parityX && !parityY && !parityZ && !parityW) {
+            return (byte)(message >> 4);
+        } else {
+            std::cout << "message error !" << std::endl;
+
+            word errorIndex = parityX;
+            errorIndex <<= 1;
+            errorIndex += parityY;
+            errorIndex <<= 1;
+            errorIndex += parityZ;
+            errorIndex <<= 1;
+            errorIndex += parityW;
+
+            const word mask = 0b0000'0000'0000'0001 << errorIndex - 1;
+            message ^= mask;
+
+            std::cout << std::bitset<sizeof errorIndex * 8>(errorIndex) << std::endl;
+            std::cout << "result: " << std::bitset<sizeof message * 8>(message) << std::endl;
+
+            return (byte)(message >> 4);
+        }
+
     }
 
 }
@@ -273,21 +307,26 @@ uint32 main (uint64 argumentsCount, bchar** arguments) {
 
     std::cout << "Hello World!\n";
     
+    word errorMessage = 0b0000'1010'1010'0100;
     byte data = 0b1010'1010;
-    word endcodedMessage = BitError1::EncodeMessage(data);
+    word encodedMessage = BitError1::EncodeMessage(data);
+    byte decodedMessage = BitError1::DecodeMessage(encodedMessage);
+    byte decodedErrorMessage = BitError1::DecodeMessage(errorMessage);
+    
 
-    std::cout << std::bitset<sizeof endcodedMessage * 8>(endcodedMessage) << std::endl;
-    //std::cout << std::bitset<sizeof result * 8>(result) << std::endl;
+    std::cout << std::bitset<sizeof encodedMessage * 8>(encodedMessage) << std::endl;
+    std::cout << std::bitset<sizeof decodedMessage * 8>(decodedMessage) << std::endl;
+    std::cout << std::bitset<sizeof decodedErrorMessage * 8>(decodedErrorMessage) << std::endl;
 
     //std::cout << std::to_string(parityX) << std::endl;
     //std::cout << std::to_string(parityY) << std::endl;
     //std::cout << std::to_string(parityZ) << std::endl;
     //std::cout << std::to_string(parityW) << std::endl;
 
-    //std::cout << std::bitset<sizeof resultX * 8>(resultX) << std::endl;
-    //std::cout << std::bitset<sizeof resultY * 8>(resultY) << std::endl;
-    //std::cout << std::bitset<sizeof resultZ * 8>(resultZ) << std::endl;
-    //std::cout << std::bitset<sizeof resultW * 8>(resultW) << std::endl;
+    //std::cout << std::bitset<sizeof equationX * 8>(equationX) << std::endl;
+    //std::cout << std::bitset<sizeof equationY * 8>(equationY) << std::endl;
+    //std::cout << std::bitset<sizeof equationZ * 8>(equationZ) << std::endl;
+    //std::cout << std::bitset<sizeof equationW * 8>(equationW) << std::endl;
 
     //std::cout << std::to_string(countSetBits(resultX)) << std::endl;
     //std::cout << std::to_string(countSetBits(resultY)) << std::endl;
