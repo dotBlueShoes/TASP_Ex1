@@ -178,7 +178,7 @@ namespace ParityDoubleErrorCorrectingCode {
         col { 1, 1, 1, 0, 1, 1, 0, 1 },
         col { 1, 1, 0, 1, 1, 0, 1, 1 },
         col { 1, 0, 1, 0, 1, 0, 1, 1 },
-        col { 1, 0, 0, 1, 0, 1, 1, 0 }, // 1001'0110 0001'0000
+        col { 1, 0, 0, 1, 0, 1, 1, 0 },
         col { 0, 1, 1, 0, 1, 0, 1, 0 },
         col { 0, 1, 0, 1, 0, 1, 0, 1 },
         col { 0, 0, 1, 1, 0, 0, 1, 1 },
@@ -186,7 +186,7 @@ namespace ParityDoubleErrorCorrectingCode {
         col { 1, 0, 0, 0, 0, 0, 0, 0 },
         col { 0, 1, 0, 0, 0, 0, 0, 0 },
         col { 0, 0, 1, 0, 0, 0, 0, 0 },
-        col { 0, 0, 0, 1, 0, 0, 0, 0 }, //
+        col { 0, 0, 0, 1, 0, 0, 0, 0 },
         col { 0, 0, 0, 0, 1, 0, 0, 0 },
         col { 0, 0, 0, 0, 0, 1, 0, 0 },
         col { 0, 0, 0, 0, 0, 0, 1, 0 },
@@ -286,22 +286,31 @@ namespace ParityDoubleErrorCorrectingCode {
                             const byte iMask = 0b1000'0000 >> i;
                             const byte jMask = 0b1000'0000 >> j;
 
-                            result = (result ^ iMask);
+                            result = (result ^ iMask) ^ jMask;
                             return result;
                         }
                     }
                 }
             }
 
-            // TODO
-            // 4. understand again
-            // 5. console
-            // 6. window
-            // 7. try implementing 1 error
-
             // If more then 2 return ERROR data signalizing the ERROR.
             return (byte)0b0;
         }
+    }
+
+    auto SimulateSingleError(word& message) {
+        const word errorMask(0b0001'0000'0000'0000);
+        message ^= errorMask;
+    }
+
+    auto SimulateDoubleError(word& message) {
+        const word errorMask(0b0010'0000'0010'0000);
+        message ^= errorMask;
+    }
+
+    auto SimulateTripleError(word& message) {
+        const word errorMask(0b0000'0100'0100'0010);
+        message ^= errorMask;
     }
 
     // read file bytes, encode
@@ -392,6 +401,12 @@ uint32 main(uint64 argumentsCount, bchar** arguments) {
     //    std::cout << "decoding..." << std::endl;
     //    PDECC::ReadAndDecode(oFilePath, rFilePath);
     //}
+
+            // TODO
+            // 4. understand again
+            // 5. console
+            // 6. window
+            // 7. try implementing 1 error
 
     const word correctMessage = 0b0000'1111'0000'0011;
     const word error1Message = 0b0000'1111'0001'0011;
