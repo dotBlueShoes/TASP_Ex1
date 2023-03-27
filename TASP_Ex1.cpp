@@ -2,30 +2,7 @@
 
 using bit = byte;
 
-namespace BitMatrix {
-
-    template<size bitCount>
-    using BitMatrix = array<bit, bitCount>;
-
-}
-
 namespace Math {
-
-    const word m1 = 0b0101010101010101; //binary: 0101...
-    const word m2 = 0b0011001100110011; //binary: 00110011..
-    const word m4 = 0b0000111100001111; //binary:  4 zeros,  4 ones ...
-    const word m8 = 0b0000000011111111; //binary:  8 zeros,  8 ones ...
-    //const byte m16 = 0x0000ffff0000ffff; //binary: 16 zeros, 16 ones ...
-    //const byte m32 = 0x00000000ffffffff; //binary: 32 zeros, 32 ones
-
-    word CountSetBits(word x) {
-        x = (x & m1) + ((x >> 1) & m1);
-        x = (x & m2) + ((x >> 2) & m2);
-        x = (x & m4) + ((x >> 4) & m4);
-        x = (x & m8) + ((x >> 8) & m8);
-        //x = (x & (0x0000ffff)) + ((x >> 16) & (0x0000ffff));
-        return x;
-    }
 
     // min 8
     template <size resultBitsCount = 8, size dataOffset = 0>
@@ -105,10 +82,6 @@ namespace Math {
         }
 
         return result;
-        // x * a + y * b + z * c + w * d;
-        // x * e + y * f + z * g + w * h;
-        // x * i + y * j + z * k + w * l;
-        // x * m + y * n + z * o + w * p
     }
 }
 
@@ -204,7 +177,7 @@ namespace ParityDoubleErrorCorrectingCode {
         }
 
         // DEBUG
-        std::string output = "M: " + std::to_string(mulResult[0]);
+        std::string output = "V: " + std::to_string(mulResult[0]);
         for (size i = 1; i < 8; i++) {
             output += ", ";
             output += std::to_string(mulResult[i]);
@@ -226,18 +199,17 @@ namespace ParityDoubleErrorCorrectingCode {
         }
 
         // DEBUG
-        std::string output = "M: " + std::to_string(mulResult[0]);
+        std::string output = "V: " + std::to_string(mulResult[0]);
         for (size i = 1; i < 8; i++) {
             output += ", ";
             output += std::to_string(mulResult[i]);
         }
         std::cout << output << std::endl;
 
-        // CORRECTING AND RETURNING
-        {
-            byte syndrome = Math::ArrayToByte(mulResult);
+        
+        { // CORRECTING AND RETURNING
+            const byte syndrome = Math::ArrayToByte(mulResult);
 
-             
             if (!syndrome) { // See if correct eg. byte is all 0'es.
                 return (byte)(Math::ArrayToWord(bitarr) >> 8);
             }
@@ -245,11 +217,37 @@ namespace ParityDoubleErrorCorrectingCode {
             // We can detect single error by enumerating through Transposed MatrixH
             //  if any is equal to our syndrome we can tell then at what index we need to flip the bit (^).
 
-            { // See if it's a single ERROR. 
-                for (size i = 0; i < altMatrixH_T.size(); i++) {
-                    byte matrixRow = Math::ArrayToByte(altMatrixH_T[i]);
-                    if (syndrome == matrixRow) {
-                        //std::cout << std::to_string(i) << std::endl;
+            // See if it's a single ERROR. 
+            for (size i = 0; i < altMatrixH_T.size(); i++) {
+                byte matrixRow = Math::ArrayToByte(altMatrixH_T[i]);
+                if (syndrome == matrixRow) {
+                    //std::cout << std::to_string(i) << std::endl;
+                    byte result = (byte)(Math::ArrayToWord(bitarr) >> 8);
+
+                    // Important Note !
+                    // right shift operator (>>) gets outside of the number when 
+                    //  it is the parity byte that has the error.
+                    //  However that doesn't matter and theres no real reason to branch that.
+
+                    const byte mask = 0b1000'0000 >> i;
+                    result ^= mask;
+                    return result;
+                }
+            }
+            
+
+            // Because double bit error is essensially a sum of 2 rows of Transposed MatrixH
+            //  what we need to do is to get all posible sums and then enumerate through those.
+
+            // See if it's a double ERROR.
+            for (size i = 0; i < altMatrixH_T.size(); i++) {
+                const byte iRow = Math::ArrayToByte(altMatrixH_T[i]);
+                for (size j = 0; j < altMatrixH_T.size(); j++) {
+                    const byte jRow = Math::ArrayToByte(altMatrixH_T[j]);
+                    byte sum = jRow ^ iRow;
+                    //std::cout << std::bitset<sizeof sum * 8>(sum) << std::endl;
+                    if (syndrome == sum) {
+                        //std::cout << std::to_string(i) << ", " << std::to_string(j) << std::endl;
                         byte result = (byte)(Math::ArrayToWord(bitarr) >> 8);
 
                         // Important Note !
@@ -257,38 +255,11 @@ namespace ParityDoubleErrorCorrectingCode {
                         //  it is the parity byte that has the error.
                         //  However that doesn't matter and theres no real reason to branch that.
 
-                        const byte mask = 0b1000'0000 >> i;
-                        result ^= mask;
+                        const byte iMask = 0b1000'0000 >> i;
+                        const byte jMask = 0b1000'0000 >> j;
+
+                        result = (result ^ iMask) ^ jMask;
                         return result;
-                    }
-                }
-            }
-
-            // Because double bit error is essensially a sum of 2 rows of Transposed MatrixH
-            //  what we need to do is to get all posible sums and then enumerate through those.
-
-            { // See if it's a double ERROR.
-                for (size i = 0; i < altMatrixH_T.size(); i++) {
-                    const byte iRow = Math::ArrayToByte(altMatrixH_T[i]);
-                    for (size j = 0; j < altMatrixH_T.size(); j++) {
-                        const byte jRow = Math::ArrayToByte(altMatrixH_T[j]);
-                        byte sum = jRow ^ iRow;
-                        //std::cout << std::bitset<sizeof sum * 8>(sum) << std::endl;
-                        if (syndrome == sum) {
-                            //std::cout << std::to_string(i) << ", " << std::to_string(j) << std::endl;
-                            byte result = (byte)(Math::ArrayToWord(bitarr) >> 8);
-
-                            // Important Note !
-                            // right shift operator (>>) gets outside of the number when 
-                            //  it is the parity byte that has the error.
-                            //  However that doesn't matter and theres no real reason to branch that.
-
-                            const byte iMask = 0b1000'0000 >> i;
-                            const byte jMask = 0b1000'0000 >> j;
-
-                            result = (result ^ iMask) ^ jMask;
-                            return result;
-                        }
                     }
                 }
             }
@@ -297,6 +268,13 @@ namespace ParityDoubleErrorCorrectingCode {
             return (byte)0b0;
         }
     }
+
+    enum class ErrorSimulation : byte {
+        None    = 0b0000'0000,
+        Single  = 0b0000'0001,
+        Double  = 0b0000'0010,
+        Triple  = 0b0000'0011
+    };
 
     auto SimulateSingleError(word& message) {
         const word errorMask(0b0001'0000'0000'0000);
@@ -339,6 +317,7 @@ namespace ParityDoubleErrorCorrectingCode {
         resultFile.close();
     }
 
+    template <ErrorSimulation flags = ErrorSimulation::None>
     auto ReadAndDecode(
         const char* const originFilePath,
         const char* const outputFilePath
@@ -362,6 +341,13 @@ namespace ParityDoubleErrorCorrectingCode {
             wholeMessage <<= 8;
             wholeMessage += inputBuffer[i + 1];
 
+            if constexpr (flags == ErrorSimulation::Single)
+                SimulateSingleError(wholeMessage);
+            else if constexpr (flags == ErrorSimulation::Double)
+                SimulateDoubleError(wholeMessage);
+            else if constexpr (flags == ErrorSimulation::Triple)
+                SimulateTripleError(wholeMessage);
+
             // Decode
             decodedMessage = Decode(wholeMessage);
 
@@ -384,48 +370,28 @@ uint32 main(uint64 argumentsCount, bchar** arguments) {
     const auto oFilePath("encoded.txt");
     const auto rFilePath("decoded.txt");
 
-    //byte a = 0b0000'1111;
-    //word b = 0b1111'0000'1111'0000;
-    //
-    //array<bool, 8> byteToArrayResult = Math::ByteToArray(a);
-    //array<bool, 16> wordToArrayResult = Math::WordToArray(b);
-    //byte aResult = Math::ArrayToByte(byteToArrayResult);
-    //word bResult = Math::ArrayToWord(wordToArrayResult);
-
-    //if (argumentsCount <= 1) return 1;
+    if (argumentsCount <= 1) return 1;
     
-    //if (strcmp(arguments[1], "encode") == 0) {
-    //    std::cout << "encoding..." << std::endl;
-    //    PDECC::ReadAndEncode(iFilePath, oFilePath);
-    //} else if (strcmp(arguments[1], "decode") == 0) {
-    //    std::cout << "decoding..." << std::endl;
-    //    PDECC::ReadAndDecode(oFilePath, rFilePath);
-    //}
+    if (strcmp(arguments[1], "encode") == 0) {
+        std::cout << "encoding..." << std::endl;
+        PDECC::ReadAndEncode(iFilePath, oFilePath);
+    } else if (strcmp(arguments[1], "decode") == 0) {
+        std::cout << "decoding..." << std::endl;
 
-            // TODO
-            // 4. understand again
-            // 5. console
-            // 6. window
-            // 7. try implementing 1 error
+        if (argumentsCount == 2) 
+            PDECC::ReadAndDecode(oFilePath, rFilePath);
+        else if (strcmp(arguments[2], "single") == 0) 
+            PDECC::ReadAndDecode<PDECC::ErrorSimulation::Single>(oFilePath, rFilePath);
+        else if (strcmp(arguments[2], "double") == 0)
+            PDECC::ReadAndDecode<PDECC::ErrorSimulation::Double>(oFilePath, rFilePath);
+        else if (strcmp(arguments[2], "triple") == 0)
+            PDECC::ReadAndDecode<PDECC::ErrorSimulation::Triple>(oFilePath, rFilePath);
 
-    const word correctMessage = 0b0000'1111'0000'0011;
-    const word error1Message = 0b0000'1111'0001'0011;
-    const word error2Message = 0b0001'1111'0000'0011;
-    const word error3Message = 0b0001'1111'0001'0011;
-    const byte data = 0b0000'1111;
+    }
 
-    word resultEncoded = PDECC::Encode(data);
-    byte resultCorrect = PDECC::Decode(correctMessage);
-    byte resultError1 = PDECC::Decode(error1Message);
-    byte resultError2 = PDECC::Decode(error2Message);
-    byte resultError3 = PDECC::Decode(error3Message);
-
-    std::cout << "\n" <<
-        "RE: " << std::bitset<sizeof resultEncoded * 8>(resultEncoded) << '\n' <<
-        "RC: " << std::bitset<sizeof resultCorrect * 8>(resultCorrect) << '\n' <<
-        "R1: " << std::bitset<sizeof resultError1 * 8>(resultError1) << '\n' <<
-        "R2: " << std::bitset<sizeof resultError2 * 8>(resultError2) << '\n' <<
-        "R3: " << std::bitset<sizeof resultError3 * 8>(resultError3) << std::endl;
+    // TODO
+    // 6. window
+    // 7. try implementing 1 error
     
     return 0;
 }
