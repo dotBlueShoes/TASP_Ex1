@@ -113,28 +113,28 @@ namespace ParityDoubleErrorCorrectingCode {
     // taka częściowa liniowa niezależność
     // do osiągnięcia tego minimum to 8 bitów parzystości dla 8 bitowej wiadomości
     // dla 2 błędów będzie to suma kolumn
-    // więc musisz porównać sumy wszystkich kolumn i znaleźć te kolumny które stworzą taką sumę
+    // więc trzeba porównać sumy wszystkich kolumn i znaleźć te kolumny które stworzą taką sumę
 
     // constant values, improves readability
+    const int byteBitCount = 8;
     const int parityBites = 8;
-    //const int number_of_bits_in_byte = 8;
 
     // Matrix which satisfies two conditions :
     // - there are no repeating rows
     // - each row has unique sum of all of its values
-    const array<const word, parityBites> matrixH {
-        0b1111'0000'1000'0000,
-        0b1100'1100'0100'0000,
-        0b1010'1010'0010'0000,
-        0b0101'0110'0001'0000,
-        0b1110'1001'0000'1000,
-        0b1001'0101'0000'0100,
-        0b0111'1011'0000'0010,
-        0b1110'0111'0000'0001,
-    };
+    //const array<const word, parityBites> matrixH {
+    //    0b1111'0000'1000'0000,
+    //    0b1100'1100'0100'0000,
+    //    0b1010'1010'0010'0000,
+    //    0b0101'0110'0001'0000,
+    //    0b1110'1001'0000'1000,
+    //    0b1001'0101'0000'0100,
+    //    0b0111'1011'0000'0010,
+    //    0b1110'0111'0000'0001,
+    //};
 
-    using row = array<bit, 8 + 8>;
-    using col = array<bit, 8>;
+    using row = array<bit, byteBitCount + parityBites>;
+    using col = array<bit, byteBitCount>;
 
     const array<row, 8> altMatrixH {
         row { 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0 },
@@ -147,7 +147,7 @@ namespace ParityDoubleErrorCorrectingCode {
         row { 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1 },
     };
 
-    const array<col, 16> altMatrixH_T {
+    const array<col, byteBitCount + parityBites> altMatrixH_T {
         col { 1, 1, 1, 0, 1, 1, 0, 1 },
         col { 1, 1, 0, 1, 1, 0, 1, 1 },
         col { 1, 0, 1, 0, 1, 0, 1, 1 },
@@ -360,11 +360,10 @@ namespace ParityDoubleErrorCorrectingCode {
 
 }
 
-namespace PSECC = ParitySingleErrorCorrectingCode;
-namespace PDECC = ParityDoubleErrorCorrectingCode;
-
-
 uint32 main(uint64 argumentsCount, bchar** arguments) {
+
+    namespace PSECC = ParitySingleErrorCorrectingCode;
+    namespace PDECC = ParityDoubleErrorCorrectingCode;
     
     const auto iFilePath("nocoded.txt");
     const auto oFilePath("encoded.txt");
