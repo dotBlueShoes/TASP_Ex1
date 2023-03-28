@@ -1,397 +1,232 @@
 ﻿#include "Framework.hpp"
+#include "Logic.hpp"
 
-using bit = byte;
+#define MAX_LOADSTRING 100
+#define IDC_BUTTON_A_CLICK 201
+#define IDC_BUTTON_B_CLICK 202
 
-namespace Math {
+// Zmienne globalne:
+HINSTANCE hInst;                                // bieżące wystąpienie
+WCHAR szTitle[MAX_LOADSTRING];                  // Tekst paska tytułu
+WCHAR szWindowClass[MAX_LOADSTRING];            // nazwa klasy okna głównego
 
-    // min 8
-    template <size resultBitsCount = 8, size dataOffset = 0>
-    auto ByteToArray(byte data) {
-        array<bit, resultBitsCount> result { 0 };
+// Przekaż dalej deklaracje funkcji dołączone w tym module kodu:
+ATOM                MyRegisterClass(HINSTANCE hInstance);
+BOOL                InitInstance(HINSTANCE, int);
+LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 
-        for (size i = 0 + dataOffset; i < resultBitsCount + dataOffset; i++) {
-            result[i] = (data >> (7 - i)) & 1;
-        }
+int WINAPI wWinMain(
+    IN          HINSTANCE hInstance,
+    OPTIONAL IN HINSTANCE hPrevInstance,
+    IN          LPWSTR    lpCmdLine,
+    IN          int       nCmdShow
+) {
 
-        return result;
-    }
+    UNREFERENCED_PARAMETER(hPrevInstance);
 
-    // min 16
-    template <size resultBitsCount = 16, size dataOffset = 0>
-    auto WordToArray(word data) {
-        array<bit, resultBitsCount> result { 0 };
+    { // Taking care of possible arguments.
+        int argumentsCount;
+        LPWSTR* arguments;
 
-        for (size i = 0 + dataOffset; i < resultBitsCount + dataOffset; i++) {
-            result[i] = (data >> (15 - i)) & 1;
-        }
-
-        return result;
-    }
-
-    auto ArrayToByte(array<bit, 8> data) {
-        byte result(data[0]);
-
-        for (size i = 1; i < data.size(); i++) {
-            result <<= 1;
-            result += data[i];
-        }
-
-        return result;
-    }
-
-    auto ArrayToWord(array<bit, 16> data) {
-        word result(data[0]);
-
-        for (size i = 1; i < data.size(); i++) {
-            result <<= 1;
-            result += data[i];
-        }
-
-        return result;
-    }
-
-    auto Dot( // row-col relation
-        const array<array<bit, 16>, 8>& a,
-        const array<bit, 16>& b
-    ) {
-        array<bit, 8> result { 0 };
-
-        for (size i = 0; i < 8; i++) {
-            result[i] =
-                a[i][0X0] * b[0X0] + a[i][0X1] * b[0X1] + a[i][0X2] * b[0X2] + a[i][0X3] * b[0X3] +
-                a[i][0X4] * b[0X4] + a[i][0X5] * b[0X5] + a[i][0X6] * b[0X6] + a[i][0X7] * b[0X7] +
-                a[i][0X8] * b[0X8] + a[i][0X9] * b[0X9] + a[i][0XA] * b[0XA] + a[i][0XB] * b[0XB] +
-                a[i][0XC] * b[0XC] + a[i][0XD] * b[0XD] + a[i][0XE] * b[0XE] + a[i][0XF] * b[0XF];
-        }
-
-        return result;
-    }
-
-    auto Dot( // equal
-        const array<array<bit, 16>, 16>& a,
-        const array<bit, 16>& b
-    ) {
-        array<bit, 16> result { 0 };
-
-        for (size i = 0; i < 16; i++) {
-            result[i] =
-                b[i] * a[i][0X0] + b[i] * a[i][0X1] + b[i] * a[i][0X2] + b[i] * a[i][0X3] +
-                b[i] * a[i][0X4] + b[i] * a[i][0X5] + b[i] * a[i][0X6] + b[i] * a[i][0X7] +
-                b[i] * a[i][0X8] + b[i] * a[i][0X9] + b[i] * a[i][0XA] + b[i] * a[i][0XB] +
-                b[i] * a[i][0XC] + b[i] * a[i][0XD] + b[i] * a[i][0XE] + b[i] * a[i][0XF];
-        }
-
-        return result;
-    }
-}
-
-namespace ParitySingleErrorCorrectingCode {
-
-    // 'word' type is 16-bits
-    //  - thats because we need 8 bits for "messageBites" and
-    //   4 bits for parityBites, therefore
-    //   4 starting bits are useless.
-    const size messageBites = 8;
-    const size parityBites = 4;
-
-    // Matrix that satisfies two conditions:
-    // - there are no repeating rows
-    // - each row has unique sum of all of its values
-    const array<const word, parityBites> matrixH {
-        0b0000'0111'0110'1000,
-        0b0000'1011'0011'0100,
-        0b0000'1101'1001'0010,
-        0b0000'1110'1100'0001,
-    };
-
-}
-
-namespace ParityDoubleErrorCorrectingCode {
-
-    // Żadna z dwóch dowolnych kolumn tej macierzy nie może tworzyć innej kolumny
-    // Wtedy poprawa 2 błędów jest możliwa
-    // taka częściowa liniowa niezależność
-    // do osiągnięcia tego minimum to 8 bitów parzystości dla 8 bitowej wiadomości
-    // dla 2 błędów będzie to suma kolumn
-    // więc trzeba porównać sumy wszystkich kolumn i znaleźć te kolumny które stworzą taką sumę
-
-    // constant values, improves readability
-    const int byteBitCount = 8;
-    const int parityBites = 8;
-
-    // Matrix which satisfies two conditions :
-    // - there are no repeating rows
-    // - each row has unique sum of all of its values
-    //const array<const word, parityBites> matrixH {
-    //    0b1111'0000'1000'0000,
-    //    0b1100'1100'0100'0000,
-    //    0b1010'1010'0010'0000,
-    //    0b0101'0110'0001'0000,
-    //    0b1110'1001'0000'1000,
-    //    0b1001'0101'0000'0100,
-    //    0b0111'1011'0000'0010,
-    //    0b1110'0111'0000'0001,
-    //};
-
-    using row = array<bit, byteBitCount + parityBites>;
-    using col = array<bit, byteBitCount>;
-
-    const array<row, 8> altMatrixH {
-        row { 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0 },
-        row { 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 },
-        row { 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0 },
-        row { 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-        row { 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0 },
-        row { 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0 },
-        row { 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0 },
-        row { 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1 },
-    };
-
-    const array<col, byteBitCount + parityBites> altMatrixH_T {
-        col { 1, 1, 1, 0, 1, 1, 0, 1 },
-        col { 1, 1, 0, 1, 1, 0, 1, 1 },
-        col { 1, 0, 1, 0, 1, 0, 1, 1 },
-        col { 1, 0, 0, 1, 0, 1, 1, 0 },
-        col { 0, 1, 1, 0, 1, 0, 1, 0 },
-        col { 0, 1, 0, 1, 0, 1, 0, 1 },
-        col { 0, 0, 1, 1, 0, 0, 1, 1 },
-        col { 0, 0, 0, 0, 1, 1, 1, 1 },
-        col { 1, 0, 0, 0, 0, 0, 0, 0 },
-        col { 0, 1, 0, 0, 0, 0, 0, 0 },
-        col { 0, 0, 1, 0, 0, 0, 0, 0 },
-        col { 0, 0, 0, 1, 0, 0, 0, 0 },
-        col { 0, 0, 0, 0, 1, 0, 0, 0 },
-        col { 0, 0, 0, 0, 0, 1, 0, 0 },
-        col { 0, 0, 0, 0, 0, 0, 1, 0 },
-        col { 0, 0, 0, 0, 0, 0, 0, 1 },
-    };
-
-    auto Encode(const byte& message) {
-        word result = message;
-
-        array<bit, 16> bitarr = Math::ByteToArray<16>(message);
-        array<bit, 8> mulResult = Math::Dot(altMatrixH, bitarr);
-
-        for (size i = 0; i < 8; i++) { 
-            mulResult[i] = (byte)mulResult[i] % 2;
-        }
-
-        // DEBUG
-        std::string output = "V: " + std::to_string(mulResult[0]);
-        for (size i = 1; i < 8; i++) {
-            output += ", ";
-            output += std::to_string(mulResult[i]);
-        }
-        std::cout << output << std::endl;
-
-        result <<= 8;
-        result += Math::ArrayToByte(mulResult);
-
-        return result;
-    }
-
-    auto Decode(const word& message) {
-        array<bit, 16> bitarr = Math::WordToArray<16>(message);
-        array<bit, 8> mulResult = Math::Dot(altMatrixH, bitarr);
-
-        for (size i = 0; i < 8; i++) {
-            mulResult[i] = (byte)mulResult[i] % 2;
-        }
-
-        // DEBUG
-        std::string output = "V: " + std::to_string(mulResult[0]);
-        for (size i = 1; i < 8; i++) {
-            output += ", ";
-            output += std::to_string(mulResult[i]);
-        }
-        std::cout << output << std::endl;
-
+        arguments = CommandLineToArgvW(lpCmdLine, &argumentsCount);
         
-        { // CORRECTING AND RETURNING
-            const byte syndrome = Math::ArrayToByte(mulResult);
+        // First arg. IS NOT THE PATH OF THE EXECUTABLE.
+        //  Therefore 1 extra arg. is needed at the start.
+        //if (argumentsCount == 1) return 1;
+        if (argumentsCount > 1) {
 
-            if (!syndrome) { // See if correct eg. byte is all 0'es.
-                return (byte)(Math::ArrayToWord(bitarr) >> 8);
-            }
-
-            // We can detect single error by enumerating through Transposed MatrixH
-            //  if any is equal to our syndrome we can tell then at what index we need to flip the bit (^).
-
-            // See if it's a single ERROR. 
-            for (size i = 0; i < altMatrixH_T.size(); i++) {
-                byte matrixRow = Math::ArrayToByte(altMatrixH_T[i]);
-                if (syndrome == matrixRow) {
-                    //std::cout << std::to_string(i) << std::endl;
-                    byte result = (byte)(Math::ArrayToWord(bitarr) >> 8);
-
-                    // Important Note !
-                    // right shift operator (>>) gets outside of the number when 
-                    //  it is the parity byte that has the error.
-                    //  However that doesn't matter and theres no real reason to branch that.
-
-                    const byte mask = 0b1000'0000 >> i;
-                    result ^= mask;
-                    return result;
-                }
-            }
+            const size maxArgumentLength = 100;
+            LPCWSTR wideStr = L"Some message";
             
-
-            // Because double bit error is essensially a sum of 2 rows of Transposed MatrixH
-            //  what we need to do is to get all posible sums and then enumerate through those.
-
-            // See if it's a double ERROR.
-            for (size i = 0; i < altMatrixH_T.size(); i++) {
-                const byte iRow = Math::ArrayToByte(altMatrixH_T[i]);
-                for (size j = 0; j < altMatrixH_T.size(); j++) {
-                    const byte jRow = Math::ArrayToByte(altMatrixH_T[j]);
-                    byte sum = jRow ^ iRow;
-                    //std::cout << std::bitset<sizeof sum * 8>(sum) << std::endl;
-                    if (syndrome == sum) {
-                        //std::cout << std::to_string(i) << ", " << std::to_string(j) << std::endl;
-                        byte result = (byte)(Math::ArrayToWord(bitarr) >> 8);
-
-                        // Important Note !
-                        // right shift operator (>>) gets outside of the number when 
-                        //  it is the parity byte that has the error.
-                        //  However that doesn't matter and theres no real reason to branch that.
-
-                        const byte iMask = 0b1000'0000 >> i;
-                        const byte jMask = 0b1000'0000 >> j;
-
-                        result = (result ^ iMask) ^ jMask;
-                        return result;
-                    }
+            char** buffer = new char*[argumentsCount];
+            
+            { // WCHAR** to CHAR** conversion
+                #pragma warning(disable : 4996) //_CRT_SECURE_NO_WARNINGS
+                for (size i = 0; i < argumentsCount; i++) {
+                    buffer[i] = new char[maxArgumentLength];
+                    wcstombs(buffer[i], arguments[i], maxArgumentLength);
+                    //MessageBoxA(nullptr, buffer[i], buffer[i], 0); // DEBUG
                 }
             }
 
-            // If more then 2 return ERROR data signalizing the ERROR.
-            return (byte)0b0;
+            main(argumentsCount, buffer);
+            
+            for (int i = 0; i < argumentsCount; i++)
+                delete buffer[i];
+            delete[] buffer;
+
+            return 0;
+        }
+
+    }
+
+    // Inicjuj ciągi globalne
+    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+    LoadStringW(hInstance, IDC_TASPEX1, szWindowClass, MAX_LOADSTRING);
+    MyRegisterClass(hInstance);
+
+    // Wykonaj inicjowanie aplikacji:
+    if (!InitInstance (hInstance, nCmdShow)) {
+        return FALSE;
+    }    
+
+    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_TASPEX1));
+    MSG msg;
+
+    // Główna pętla komunikatów:
+    while (GetMessage(&msg, nullptr, 0, 0)) {
+        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
         }
     }
 
-    enum class ErrorSimulation : byte {
-        None    = 0b0000'0000,
-        Single  = 0b0000'0001,
-        Double  = 0b0000'0010,
-        Triple  = 0b0000'0011
-    };
-
-    auto SimulateSingleError(word& message) {
-        const word errorMask(0b0001'0000'0000'0000);
-        message ^= errorMask;
-    }
-
-    auto SimulateDoubleError(word& message) {
-        const word errorMask(0b0010'0000'0010'0000);
-        message ^= errorMask;
-    }
-
-    auto SimulateTripleError(word& message) {
-        const word errorMask(0b0000'0100'0100'0010);
-        message ^= errorMask;
-    }
-
-    // read file bytes, encode
-    // and save result to a different file
-    auto ReadAndEncode(
-        const char* const originFilePath,
-        const char* const outputFilePath
-    ) {
-
-        std::ifstream originFile(originFilePath, std::ios::binary);
-        std::ofstream resultFile(outputFilePath, std::ios::binary);
-
-        // READ
-        std::vector<byte> inputBuffer(std::istreambuf_iterator<char>(originFile), {});
-        originFile.close();
-
-        word encodedMessage;
-
-        for (auto& message : inputBuffer) {
-            // ENCODING
-            encodedMessage = Encode(message);
-            // WRITE
-            resultFile << (byte)(encodedMessage >> 8) << (byte)(encodedMessage);
-        }
-
-        resultFile.close();
-    }
-
-    template <ErrorSimulation flags = ErrorSimulation::None>
-    auto ReadAndDecode(
-        const char* const originFilePath,
-        const char* const outputFilePath
-    ) {
-        std::ifstream originFile(originFilePath, std::ios::binary);
-        std::ofstream resultFile(outputFilePath, std::ios::binary);
-
-        // READ
-        std::vector<byte> inputBuffer(std::istreambuf_iterator<char>(originFile), {});
-        originFile.close();
-
-        
-        byte decodedMessage = 'a';
-        word wholeMessage;
-
-        // buffer is per byte therefore we need to read 2 bytes and move by 2 bytes.
-        for (size i = 0; i < inputBuffer.size(); i += 2) {
-
-            // Parse into one.
-            wholeMessage = inputBuffer[i];
-            wholeMessage <<= 8;
-            wholeMessage += inputBuffer[i + 1];
-
-            if constexpr (flags == ErrorSimulation::Single)
-                SimulateSingleError(wholeMessage);
-            else if constexpr (flags == ErrorSimulation::Double)
-                SimulateDoubleError(wholeMessage);
-            else if constexpr (flags == ErrorSimulation::Triple)
-                SimulateTripleError(wholeMessage);
-
-            // Decode
-            decodedMessage = Decode(wholeMessage);
-
-            // Write
-            resultFile << decodedMessage;
-        }
-
-        resultFile.close();
-    }
-
+    return (int) msg.wParam;
 }
 
-uint32 main(uint64 argumentsCount, bchar** arguments) {
 
-    namespace PSECC = ParitySingleErrorCorrectingCode;
-    namespace PDECC = ParityDoubleErrorCorrectingCode;
-    
-    const auto iFilePath("nocoded.txt");
-    const auto oFilePath("encoded.txt");
-    const auto rFilePath("decoded.txt");
 
-    if (argumentsCount <= 1) return 1;
-    
-    if (strcmp(arguments[1], "encode") == 0) {
-        std::cout << "encoding..." << std::endl;
-        PDECC::ReadAndEncode(iFilePath, oFilePath);
-    } else if (strcmp(arguments[1], "decode") == 0) {
-        std::cout << "decoding..." << std::endl;
+//
+//  FUNKCJA: MyRegisterClass()
+//
+//  PRZEZNACZENIE: Rejestruje klasę okna.
+//
+ATOM MyRegisterClass(HINSTANCE hInstance) {
+    WNDCLASSEXW wcex;
 
-        if (argumentsCount == 2) 
-            PDECC::ReadAndDecode(oFilePath, rFilePath);
-        else if (strcmp(arguments[2], "single") == 0) 
-            PDECC::ReadAndDecode<PDECC::ErrorSimulation::Single>(oFilePath, rFilePath);
-        else if (strcmp(arguments[2], "double") == 0)
-            PDECC::ReadAndDecode<PDECC::ErrorSimulation::Double>(oFilePath, rFilePath);
-        else if (strcmp(arguments[2], "triple") == 0)
-            PDECC::ReadAndDecode<PDECC::ErrorSimulation::Triple>(oFilePath, rFilePath);
+    wcex.cbSize = sizeof(WNDCLASSEX);
 
+    wcex.style          = CS_HREDRAW | CS_VREDRAW;
+    wcex.lpfnWndProc    = WndProc;
+    wcex.cbClsExtra     = 0;
+    wcex.cbWndExtra     = 0;
+    wcex.hInstance      = hInstance;
+    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TASPEX1));
+    wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
+    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
+    wcex.lpszMenuName   = nullptr; // MAKEINTRESOURCEW(IDC_TASPEX1);
+    wcex.lpszClassName  = szWindowClass;
+    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+
+    return RegisterClassExW(&wcex);
+}
+
+//
+//   FUNKCJA: InitInstance(HINSTANCE, int)
+//
+//   PRZEZNACZENIE: Zapisuje dojście wystąpienia i tworzy okno główne
+//
+//   KOMENTARZE:
+//
+//        W tej funkcji dojście wystąpienia jest zapisywane w zmiennej globalnej i
+//        jest tworzone i wyświetlane okno główne programu.
+//
+BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
+   hInst = hInstance; // Przechowuj dojście wystąpienia w naszej zmiennej globalnej
+
+   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+      CW_USEDEFAULT, 0, 206, 100, nullptr, nullptr, hInstance, nullptr);
+
+   if (!hWnd) {
+      return FALSE;
+   }
+
+   HWND buttonA = CreateWindowW (
+       L"BUTTON",
+       L"Encode",
+       WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+       10,
+       10,
+       80,
+       40,
+       hWnd,
+       (HMENU)IDC_BUTTON_A_CLICK,
+       hInstance,
+       nullptr
+   );
+
+   HWND buttonB = CreateWindowW (
+       L"BUTTON",                                               // Predefined class
+       L"Decode",                                               // Button text 
+       WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,   // Styles 
+       10 + 80 + 10,                                            // x position 
+       10,                                                      // y position 
+       80,                                                      // Button width
+       40,                                                      // Button height
+       hWnd,                                                    // Parent window
+       (HMENU)IDC_BUTTON_B_CLICK,                                                 // No menu.
+       hInstance,
+       nullptr                                                  // Pointer not needed.
+   );
+
+   ShowWindow(hWnd, nCmdShow);
+   UpdateWindow(hWnd);
+
+   return TRUE;
+}
+
+//
+//  FUNKCJA: WndProc(HWND, UINT, WPARAM, LPARAM)
+//
+//  PRZEZNACZENIE: Przetwarza komunikaty dla okna głównego.
+//
+//  WM_COMMAND  - przetwarzaj menu aplikacji
+//  WM_PAINT    - Maluj okno główne
+//  WM_DESTROY  - opublikuj komunikat o wyjściu i wróć
+//
+//
+LRESULT CALLBACK WndProc(
+    HWND hWnd,
+    UINT message, 
+    WPARAM wParam, 
+    LPARAM lParam
+) {
+    switch (message) {
+        case WM_COMMAND: {
+            int wmId = LOWORD(wParam);
+            switch (wmId) {
+
+                case IDC_BUTTON_A_CLICK: {
+                    namespace PDECC = ParityDoubleErrorCorrectingCode;
+                    const auto iFilePath("nocoded.txt");
+                    const auto oFilePath("encoded.txt");
+                    PDECC::ReadAndEncode(iFilePath, oFilePath);
+                    MessageBeep(MB_OK); // Just to give user more feedback.
+                } break;
+
+                case IDC_BUTTON_B_CLICK: {
+                    namespace PDECC = ParityDoubleErrorCorrectingCode;
+                    const auto iFilePath("encoded.txt");
+                    const auto oFilePath("decoded.txt");
+                    PDECC::ReadAndDecode(iFilePath, oFilePath);
+                    MessageBeep(MB_OK);// Just to give user more feedback.
+                } break;
+
+
+                case IDM_EXIT:
+                    DestroyWindow(hWnd);
+                    break;
+
+                default:
+                    return DefWindowProc(hWnd, message, wParam, lParam);
+            }
+        } break;
+
+        case WM_PAINT: {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hWnd, &ps);
+            // TODO: Tutaj dodaj kod rysujący używający elementu hdc...
+            EndPaint(hWnd, &ps);
+        } break;
+
+        case WM_DESTROY: {
+            PostQuitMessage(0);
+        } break;
+
+        default: {
+            return DefWindowProc(hWnd, message, wParam, lParam);
+        }
     }
 
-    // TODO
-    // 6. window
-    // 7. try implementing 1 error
-    
     return 0;
 }
-

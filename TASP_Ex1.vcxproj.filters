@@ -15,16 +15,38 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Framework.hpp">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="Resource.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="Logic.hpp">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="TASP_Ex1.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Framework.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
+    <ResourceCompile Include="TASP_Ex1.rc">
+      <Filter>Pliki zasobów</Filter>
+    </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="README.md" />
+    <Image Include="small.ico">
+      <Filter>Pliki zasobów</Filter>
+    </Image>
+    <Image Include="TASP_Ex1.ico">
+      <Filter>Pliki zasobów</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="TASP_Ex1.exe.manifest" />
   </ItemGroup>
 </Project>

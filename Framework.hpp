@@ -1,21 +1,52 @@
+ï»¿#pragma once
+
+// MANIFEST dependency for controls
+#if defined _M_IX86
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_IA64
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='ia64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_X64
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#else
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#endif
+
+// WINDOWS
+#include "targetver.h"
+#define WIN32_LEAN_AND_MEAN             // Wyklucz rzadko uÅ¼ywane rzeczy z nagÅ‚Ã³wkÃ³w systemu Windows
+#include <windows.h>
+#include <shellapi.h>
+
+// OTHER
+#include <stdlib.h>
+#include <malloc.h>
+#include <memory.h>
+#include <tchar.h>
 #include <iostream>
 #include <fstream>
 #include <bitset>
 #include <vector>
 #include <string>
 
-// Exercise
-// 1. Opracowaæ kod koryguj¹cy pojedynczy b³¹d bitowy dla wiadomoœci oœmiobitowych (1 bajt)
-// 2. Opracowaæ kod koryguj¹cy podwójny b³¹d bitowy dla wiadomoœci oœmiobitowych (1 bajt)
-// 3. Napisaæ program przekodowuj¹cy dowolny plik do postaci zakodowanej jednym z
-//  opracowanych kodów(przygotowanie do transmisji) i odkodowywuj¹cy do postaci
-//  pierwotnej(odtworzenie danych po transmisji) z korekcj¹ powsta³ych b³êdów.
-// 
-//  Dla u³atwienia zadania mo¿na kodowaæ dane z upakowaniem na granicy 1 bajtu, czyli s³owa o
-//  d³ugoœci od 9 do 16 bitów jako 2 bajty, 17 - 24 bity jako 3 bajty itd. 
-//  Operacje kodowania / odkodowania powinny byæ uruchamiane niezale¿nie od siebie, tak by mo¿na
-//  by³o poprzez rêczn¹ modyfikacjê pliku zasymulowaæ powstanie b³êdów transmisji.
+// RESOURCE
+#include "resource.h"
 
+// Exercise
+// 1. OpracowaÄ‡ kod korygujÄ…cy pojedynczy bÅ‚Ä…d bitowy dla wiadomoÅ›ci oÅ›miobitowych (1 bajt)
+// 2. OpracowaÄ‡ kod korygujÄ…cy podwÃ³jny bÅ‚Ä…d bitowy dla wiadomoÅ›ci oÅ›miobitowych (1 bajt)
+// 3. NapisaÄ‡ program przekodowujÄ…cy dowolny plik do postaci zakodowanej jednym z
+//  opracowanych kodÃ³w(przygotowanie do transmisji) i odkodowywujÄ…cy do postaci
+//  pierwotnej(odtworzenie danych po transmisji) z korekcjÄ… powstaÅ‚ych bÅ‚Ä™dÃ³w.
+// 
+//  Dla uÅ‚atwienia zadania moÅ¼na kodowaÄ‡ dane z upakowaniem na granicy 1 bajtu, czyli sÅ‚owa o
+//  dÅ‚ugoÅ›ci od 9 do 16 bitÃ³w jako 2 bajty, 17 - 24 bity jako 3 bajty itd. 
+//  Operacje kodowania / odkodowania powinny byÄ‡ uruchamiane niezaleÅ¼nie od siebie, tak by moÅ¼na
+//  byÅ‚o poprzez rÄ™cznÄ… modyfikacjÄ™ pliku zasymulowaÄ‡ powstanie bÅ‚Ä™dÃ³w transmisji.
+
+// TODO
+// 7. Try implementing 1 error
+
+// TYPES
 using sint32 = int32_t;
 using sint64 = int64_t;
 using uint32 = uint32_t;
@@ -29,17 +60,7 @@ using size = uint64;
 using word = uint16_t;
 using byte = uint8_t;
 
+// ARRAY
 #include <array>
 template <class T, size length>
 using array = std::array<T, length>;
-
-// Uruchomienie programu: Ctrl + F5 lub menu Debugowanie > Uruchom bez debugowania
-// Debugowanie programu: F5 lub menu Debugowanie > Rozpocznij debugowanie
-
-// Porady dotycz¹ce rozpoczynania pracy:
-//   1. U¿yj okna Eksploratora rozwi¹zañ, aby dodaæ pliki i zarz¹dzaæ nimi
-//   2. U¿yj okna programu Team Explorer, aby nawi¹zaæ po³¹czenie z kontrol¹ Ÿród³a
-//   3. U¿yj okna Dane wyjœciowe, aby sprawdziæ dane wyjœciowe kompilacji i inne komunikaty
-//   4. U¿yj okna Lista b³êdów, aby zobaczyæ b³êdy
-//   5. Wybierz pozycjê Projekt > Dodaj nowy element, aby utworzyæ nowe pliki kodu, lub wybierz pozycjê Projekt > Dodaj istniej¹cy element, aby dodaæ istniej¹ce pliku kodu do projektu
-//   6. Aby w przysz³oœci ponownie otworzyæ ten projekt, przejdŸ do pozycji Plik > Otwórz > Projekt i wybierz plik sln
